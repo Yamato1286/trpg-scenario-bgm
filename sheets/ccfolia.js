@@ -97,7 +97,7 @@
     }
     title.textContent = cur.name ? `${cur.name} のキャラシ（帯をつかんで移動／右下で大きさ）` : 'キャラシ';
     const f = el('iframe', 'flex:1;border:0;background:#fff;width:100%');
-    f.src = cur.url;
+    f.src = cur.url + '?t=' + Math.floor(Date.now() / 60000); // 公開ページは10分ブラウザに残るので、開くたびに新しい版を読む
     body.replaceChildren(f);
   };
   bSwitch.onclick = () => { fetchList().then((list) => { listed = list; choose(); }); };
