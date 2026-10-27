@@ -108,6 +108,7 @@ const curMask=()=>hp.reduce((m,a,i)=>m|(a?0:1<<i),0);
 const CATN=['器術','体術','忍術','謀術','戦術','妖術'];const tell=(t)=>{if(FRAMED)parent.postMessage({type:'stt-roll',text:t,name:D.name||''},'*');};
 $$('#st-hp button').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.c;hp[i]=!hp[i];keep();redraw();tell(':'+CATN[i]+'='+(hp[i]?1:0));}));
 $$('#st-off button').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.k;off.has(k)?off.delete(k):off.add(k);keep();redraw();}));
+addEventListener('message',(e)=>{if(!FRAMED||e.source!==parent||e.origin!=='https://ccfolia.com'||!e.data||e.data.type!=='stt-status')return;const i=CATN.indexOf(e.data.label);const v=Number(e.data.value);if(!Number.isFinite(v))return;if(i>=0){const a=v>0;if(hp[i]===a)return;hp[i]=a;keep();redraw();}else if(e.data.label==='ファンブル'||e.data.label==='スペシャル'){if(e.data.label==='ファンブル')SF.f=v;else SF.s=v;if(picked)show(picked.sk,picked.label);}});
 $('#st-reset').addEventListener('click',()=>{const ch=[];D.hp.forEach((x,i)=>{if(hp[i]!==x){hp[i]=x;ch.push(':'+CATN[i]+'='+(x?1:0));}});off.clear();keep();redraw();ch.forEach(tell);});
 redraw();
 const BM=(u)=>'javascript:'+encodeURIComponent("(()=>{window.__sttPreset="+JSON.stringify(u)+";const s=document.createElement('script');s.src="+JSON.stringify(new URL('ccfolia.js',u).href)+"+'?t='+Date.now();document.body.append(s);})()");

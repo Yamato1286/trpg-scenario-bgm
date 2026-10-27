@@ -134,5 +134,29 @@
       }
     });
   }
+  // 駒のステータスが変わったら（チャットに「[ 連 ] 体術 : 1 → 0」と出る）、窓のキャラシにも伝える。
+  // パレット・駒の編集・ほかの人の操作など、窓の外で変わっても窓の生命力・スペシャル・ファンブルが食い違わないようにする。
+  // チャットの一番下に新しく出た行だけを見る（上にさかのぼって表示し直した古い行では動かない）
+  if (!window.__sttWatch) {
+    window.__sttWatch = 1;
+    const opened = Date.now();
+    const RE = /^\[ (.+?) \] (.+?) : (-?\d+) → (-?\d+)$/;
+    const atBottom = (e) => { for (let x = e; x && x !== document.body; x = x.parentElement) { if (x.scrollHeight > x.clientHeight + 4 && /auto|scroll/.test(getComputedStyle(x).overflowY)) return x.scrollTop + x.clientHeight >= x.scrollHeight - 80; } return true; };
+    const isNewest = (e) => { let row = e; while (row.parentElement && row.parentElement.childElementCount < 3) row = row.parentElement; return !row.nextElementSibling; };
+    new MutationObserver((recs) => {
+      if (Date.now() - opened < 1500) return;
+      const cur = load().rooms?.[room]; const panel = document.getElementById('stt-sheet'); const f = panel && panel.querySelector('iframe');
+      if (!cur || !cur.name || !f) return;
+      for (const r of recs) for (const n of r.addedNodes) {
+        if (n.nodeType !== 1 || n.closest('#stt-sheet')) continue;
+        for (const p of [n, ...n.querySelectorAll('p,span,div')]) {
+          if (p.childElementCount) continue;
+          const m = RE.exec((p.textContent || '').trim());
+          if (!m || m[1] !== cur.name || !isNewest(p) || !atBottom(p)) continue;
+          f.contentWindow.postMessage({ type: 'stt-status', label: m[2], value: Number(m[4]) }, ORIGIN);
+        }
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+  }
   open();
 })();
