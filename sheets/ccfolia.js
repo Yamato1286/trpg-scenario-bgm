@@ -14,7 +14,8 @@
   const clean = (u) => { try { const x = new URL(String(u).trim()); return x.origin === ORIGIN && /\/sheets\/[\w-]+\.html$/.test(x.pathname) ? x.origin + x.pathname : ''; } catch (e) { return ''; } };
   const preset = clean(window.__sttPreset || ''); window.__sttPreset = '';
   const cleanList = (u) => { try { const x = new URL(String(u)); return x.origin === ORIGIN && /\/sheets\/list-[a-f0-9]+\.json$/.test(x.pathname) ? x.origin + x.pathname : ''; } catch (e) { return ''; } };
-  if (window.__sttList) { const l = cleanList(window.__sttList); if (l) { st.list = l; save(st); } window.__sttList = ''; }
+  let newList = false;
+  if (window.__sttList) { const l = cleanList(window.__sttList); if (l && l !== st.list) { st.list = l; save(st); newList = true; } window.__sttList = ''; }
   // 共有中のキャラの一覧（ブックマークに入っている置き場から読む）
   const fetchList = async () => { if (!st.list) return []; try { const r = await fetch(st.list + '?t=' + Date.now(), { cache: 'no-store' }); const j = await r.json(); return (j.sheets || []).filter((x) => clean(x.url)); } catch (e) { return []; } };
   // この部屋にいるキャラ：発言者の名前と、画面に出ている文字（駒の名前・ステータス欄・チャットの名前）がキャラシの名前と同じもの
@@ -28,7 +29,8 @@
   if (preset && room) { st.rooms[room] = { ...(st.rooms[room] || {}), url: preset }; save(st); }
 
   let p = document.getElementById('stt-sheet');
-  if (p) { if (preset) { p.remove(); p = null; } else { p.style.display = p.style.display === 'none' ? 'flex' : 'none'; return; } }
+  // 押すたびに出す／隠すを切り替える（中の生命力などはそのまま）。新しい設定で押したとき・キャラを選ぶ画面のままのときは作り直す（最新の一覧で選び直す）
+  if (p) { const showing = p.style.display !== 'none'; const choosing = !p.querySelector('iframe'); if (!preset && !newList && !choosing) { p.style.display = showing ? 'none' : 'flex'; return; } p.remove(); p = null; }
 
   const css = (el, s) => { el.style.cssText = s; return el; };
   const el = (tag, s, text) => { const e = css(document.createElement(tag), s || ''); if (text != null) e.textContent = text; return e; };
