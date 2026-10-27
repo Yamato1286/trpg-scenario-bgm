@@ -72,7 +72,7 @@ function successRate(need) {
 }
 const hp=D.hp.slice();
 const usable=()=>D.skills.filter(k=>{const w=where(k);return !w||hp[w.c];});
-function explain(sk){const q=where(sk);let best=null;for(const o of usable()){const d=distance(o,sk,D.gaps,{wrap:D.wrap,wrapRows:D.wrapRows});if(d==null)continue;if(!best||d<best.d){const p=where(o);const dr=D.wrapRows?Math.min(Math.abs(p.r-q.r),11-Math.abs(p.r-q.r)):Math.abs(p.r-q.r);best={d,from:o,rows:dr,cols:d-dr};}}return best?{target:5+best.d,...best}:null;}
+function explain(sk){const q=where(sk);let best=null;for(const o of usable()){const d=distance(o,sk,D.gaps,{wrap:D.wrap,wrapRows:D.wrapRows});if(d==null)continue;if(!best||d<best.d){const p=where(o);const dr=D.wrapRows?Math.min(Math.abs(p.r-q.r),11-Math.abs(p.r-q.r)):Math.abs(p.r-q.r);const m0=distance(o,sk,[true,true,true,true,true,true],{wrap:D.wrap,wrapRows:D.wrapRows});const masu=m0==null?d:Math.min(m0,d);best={d,from:o,rows:dr,cols:d-dr,masu,gap:d-masu};}}return best?{target:5+best.d,...best}:null;}
 const $=(q)=>document.querySelector(q),$$=(q)=>[...document.querySelectorAll(q)];
 const judge=$('.judge');let picked=null;
 const FRAMED=(()=>{try{return window.parent!==window;}catch(e){return true;}})();const SF={s:12,f:2};
@@ -88,7 +88,7 @@ const num=(v,l)=>{const i=document.createElement('input');i.type='number';i.valu
 const [spI,spL]=num(SF.s,'スペ');const [fuI,fuL]=num(SF.f,'ファンブル');
 if(FRAMED)btn.textContent='ココフォリアで振る';const prev=document.createElement('code');prev.className='send';
 const draw=()=>{const m=Number(mod.value)||0;picked.mod=m;SF.s=Number(spI.value)||12;SF.f=Number(fuI.value)||2;const need=e.target-m;b.textContent=label+'《'+sk+'》 判定値 '+need+' 以上（成功率'+Math.round(successRate(need)*100)+'%）';why.textContent=e.from===sk?'修得している特技（5）':'《'+e.from+'》から 縦'+e.rows+'・横'+e.cols+'（5＋'+e.d+'＝'+e.target+'）';
-const sf=(SF.s!==12?'@'+SF.s:'')+(SF.f!==2?'#'+SF.f:'');const text='SG'+sf+'>='+need+' '+label+'《'+sk+'》'+(m?'（修正'+(m>0?'+':'')+m+'）':'');prev.textContent=(FRAMED?'送る文：':'コピーする文：')+text;
+const sf=(SF.s!==12?'@'+SF.s:'')+(SF.f!==2?'#'+SF.f:'');const own=e.from===sk;const terms=['5'];if(!own){terms.push(String(e.masu));if(e.gap)terms.push(String(e.gap));}if(m)terms.push(m<0?String(-m):'-'+m);const expr=terms.length>1?'('+terms.join('+').split('+-').join('-')+')':'5';const parts=own?[]:['マス目+'+e.masu].concat(e.gap?['ギャップ+'+e.gap]:[]);if(m)parts.push('修正'+(m>0?'+':'')+m);const note=own?'修得特技'+(m?'（'+parts.join('／')+'）':''):'代用：《'+e.from+'》（'+parts.join('／')+'）';const text='SG'+sf+'>='+expr+' '+label+'《'+sk+'》 '+note;prev.textContent=(FRAMED?'送る文：':'コピーする文：')+text;
 btn.onclick=()=>{if(FRAMED){parent.postMessage({type:'stt-roll',text,name:D.name||''},'*');flash(btn,'送りました');}else{copy(text);flash(btn,'コピーしました');}};};
 mod.oninput=draw;spI.oninput=draw;fuI.oninput=draw;const ml=document.createElement('label');ml.className='why';ml.append('修正 ',mod);judge.append(b,why,ml,spL,fuL,btn,prev);draw();}
 function redraw(){const u=new Set(usable());$$('.grid td[data-sk]').forEach(td=>{const sk=td.dataset.sk;const own=D.skills.includes(sk);td.classList.toggle('on',own);td.classList.toggle('lost',own&&!u.has(sk));const e=own?null:explain(sk);td.querySelector('small').textContent=own?'':(e?e.target:'');});
