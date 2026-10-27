@@ -16,7 +16,7 @@ table{border-collapse:collapse;width:100%}.grid{table-layout:fixed;font-size:13p
 .grid td.pick{outline:3px solid var(--accent2);outline-offset:-3px}.grid td.from{outline:2px dashed var(--accent2);outline-offset:-3px}
 .grid th{padding:0;border:1px solid var(--line)}.grid th.cat{padding:5px 0;background:#efe6d6}.grid th.cat.lost{background:#ccc;color:#666}.grid th.cat span{color:#a33;margin-left:3px}.grid .gap{width:14px;padding:0;background:#f4efe4;border-left:0;border-right:0;cursor:default;font-size:10px;color:#fff}.grid .gap.on{background:var(--accent2)}.grid td.gap:hover{background:#f4efe4}.grid td.gap.on:hover{background:var(--accent2)}.hp{all:unset;display:block;width:100%;padding:5px 0;cursor:pointer;font-weight:700;background:#efe6d6}.hp span{margin-left:3px;color:var(--accent)}.hp.lost{background:#ccc;color:#666}.hp.lost span{color:#a33}
 .judge{position:sticky;bottom:0;z-index:2;margin-top:10px;background:#2a2116;color:#fff;border-radius:10px;padding:10px 12px;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:14px}
-.dbl{display:none}.framed .dbl{display:inline}.judge b{font-size:1.15em}.judge .why{color:#e8d9c0;font-size:.9em}.judge input{width:4.2em;font:inherit;padding:2px 4px;border-radius:6px;border:0}
+.judge .send{flex-basis:100%;font:12px ui-monospace,Consolas,monospace;color:#f3e6d0;background:#00000040;border-radius:6px;padding:3px 8px;user-select:all}.dbl{display:none}.framed .dbl{display:inline}.judge b{font-size:1.15em}.judge .why{color:#e8d9c0;font-size:.9em}.judge input{width:4.2em;font:inherit;padding:2px 4px;border-radius:6px;border:0}
 .judge button,.copy{font:inherit;border:0;border-radius:8px;padding:4px 12px;background:var(--accent2);color:#fff;cursor:pointer}
 .np{border-top:1px solid var(--line);padding:8px 0}.np:first-of-type{border-top:0}.np.judgeable{cursor:pointer}.np.judgeable:hover{background:#faf3e6}
 .np-head{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}.np-head b{font-size:1.05em}
@@ -86,11 +86,11 @@ const mod=document.createElement('input');mod.type='number';mod.value=String(pic
 const why=document.createElement('span');why.className='why';const btn=document.createElement('button');btn.type='button';btn.textContent='判定の文をコピー';
 const num=(v,l)=>{const i=document.createElement('input');i.type='number';i.value=String(v);i.setAttribute('aria-label',l);const w=document.createElement('label');w.className='why';w.append(l+' ',i);return [i,w];};
 const [spI,spL]=num(SF.s,'スペ');const [fuI,fuL]=num(SF.f,'ファンブル');
-if(FRAMED)btn.textContent='ココフォリアで振る';
+if(FRAMED)btn.textContent='ココフォリアで振る';const prev=document.createElement('code');prev.className='send';
 const draw=()=>{const m=Number(mod.value)||0;picked.mod=m;SF.s=Number(spI.value)||12;SF.f=Number(fuI.value)||2;const need=e.target-m;b.textContent=label+'《'+sk+'》 判定値 '+need+' 以上（成功率'+Math.round(successRate(need)*100)+'%）';why.textContent=e.from===sk?'修得している特技（5）':'《'+e.from+'》から 縦'+e.rows+'・横'+e.cols+'（5＋'+e.d+'＝'+e.target+'）';
-const sf=(SF.s!==12?'@'+SF.s:'')+(SF.f!==2?'#'+SF.f:'');const text='SG'+sf+'>='+need+' '+label+'《'+sk+'》'+(m?'（修正'+(m>0?'+':'')+m+'）':'');
+const sf=(SF.s!==12?'@'+SF.s:'')+(SF.f!==2?'#'+SF.f:'');const text='SG'+sf+'>='+need+' '+label+'《'+sk+'》'+(m?'（修正'+(m>0?'+':'')+m+'）':'');prev.textContent=(FRAMED?'送る文：':'コピーする文：')+text;
 btn.onclick=()=>{if(FRAMED){parent.postMessage({type:'stt-roll',text,name:D.name||''},'*');flash(btn,'送りました');}else{copy(text);flash(btn,'コピーしました');}};};
-mod.oninput=draw;spI.oninput=draw;fuI.oninput=draw;const ml=document.createElement('label');ml.className='why';ml.append('修正 ',mod);judge.append(b,why,ml,spL,fuL,btn);draw();}
+mod.oninput=draw;spI.oninput=draw;fuI.oninput=draw;const ml=document.createElement('label');ml.className='why';ml.append('修正 ',mod);judge.append(b,why,ml,spL,fuL,btn,prev);draw();}
 function redraw(){const u=new Set(usable());$$('.grid td[data-sk]').forEach(td=>{const sk=td.dataset.sk;const own=D.skills.includes(sk);td.classList.toggle('on',own);td.classList.toggle('lost',own&&!u.has(sk));const e=own?null:explain(sk);td.querySelector('small').textContent=own?'':(e?e.target:'');});
 $$('[data-tv]').forEach(x=>{const e=explain(x.dataset.tv);x.textContent=e?e.target:'-';});
 
