@@ -152,8 +152,9 @@
         for (const p of [n, ...n.querySelectorAll('p,span,div')]) {
           if (p.childElementCount) continue;
           const m = RE.exec((p.textContent || '').trim());
-          if (!m || m[1] !== cur.name || !isNewest(p) || !atBottom(p)) continue;
-          f.contentWindow.postMessage({ type: 'stt-status', label: m[2], value: Number(m[4]) }, ORIGIN);
+          if (!m || m[1] !== cur.name) continue;
+          // 出た直後はまだ下までスクロールしていないので、少し待ってから「一番下の新しい行か」を確かめる
+          setTimeout(() => { if (p.isConnected && isNewest(p) && atBottom(p)) f.contentWindow.postMessage({ type: 'stt-status', label: m[2], value: Number(m[4]) }, ORIGIN); }, 500);
         }
       }
     }).observe(document.body, { childList: true, subtree: true });
