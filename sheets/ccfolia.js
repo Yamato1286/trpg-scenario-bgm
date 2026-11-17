@@ -448,7 +448,8 @@
     setVal(t, String(text).slice(0, 500)); await wait(60);
     const fm = t.closest('form'); if (fm) fm.requestSubmit();
     await wait(500);
-    if (n && name && old && old !== name) setVal(n, old);
+    // 元が空（noname）のときも空に戻す（2026-11-17 練習部屋で、空のときは振った後もキャラ名のまま残っていた）
+    if (n && name && old !== name) setVal(n, old);
   }).catch((e) => console.warn('[キャラシ]', e)));
 
   if (!window.__sttListen) {
