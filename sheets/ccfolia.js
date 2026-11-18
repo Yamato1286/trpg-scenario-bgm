@@ -3,7 +3,7 @@
 // ブックマークは「これを読み込む」だけなので、ここを直せば登録し直さなくても新しい版が使われる。
 //   ・キャラシは部屋ごとに覚える（ココフォリア側の localStorage）。最初の1回だけ共有ページのURLを貼る
 //   ・キャラシの中で「ココフォリアで振る」を押すと、発言者をそのキャラ名にしてチャットに送り、発言者を元に戻す
-//   ・動くのは押した人の画面だけ。部屋のデータは変えない
+//   ・動くのは押した人の画面だけ。部屋のデータは変えない（例外：キャラシの「変調・感情」を押すと、その駒のキャラクターメモの【状態】欄だけ書き換える。2026-11-19）
 //   ・CoC（クトゥルフ神話TRPG）の部屋では「CoC の判定」に切り替える。キャラシは使わず、駒のチャットパレットの技能から判定を組み立てて送る
 (() => {
   // ===== CoC の判定のつまみ：コマンドの組み立て・読み取り（画面に触らない。tests/ccfolia-coc.test.js で確かめる） =====
@@ -467,6 +467,45 @@
         const tt = document.querySelector('#stt-sheet span'); if (tt && cur.name) tt.textContent = `${cur.name} のキャラシ（帯をつかんで移動／右下で大きさ）`;
       }
     });
+  }
+  // キャラクターメモの【状態】欄を書き換える（2026-11-19 作者「変調・感情をボタンひとつで。キャラクターメモを自動で更新」）。
+  //   ココフォリアはチャットのコマンドでメモ・パラメータを変えられない（練習部屋で :流派=… が効かないのを確認）→ 盤面の駒の「編集」を開く処理を呼び、
+  //   メモの欄を書き換えて Esc で閉じる（閉じたときにココフォリアが保存する。練習部屋で確認）。駒が盤面に無いと開けないので、そのときは知らせる
+  if (!window.__sttMemo) {
+    window.__sttMemo = 1;
+    const rootFiber = () => { const r = document.getElementById('root'); const k = r && Object.keys(r).find((x) => x.startsWith('__reactContainer')); return k ? r[k] : null; };
+    const walk = (start, hit, max = 90000) => { const q = [start]; let n0 = 0; while (q.length && n0 < max) { const n = q.shift(); n0++; if (!n) continue; if (hit(n)) return n; if (n.child) q.push(n.child); if (n.sibling) q.push(n.sibling); } return null; };
+    let store = null;
+    const getStore = () => { if (store) return store; const n = walk(rootFiber(), (x) => x.memoizedProps && x.memoizedProps.store && x.memoizedProps.store.getState); store = n ? n.memoizedProps.store : null; return store; };
+    const setTa = (e, v) => { Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(e, v); e.dispatchEvent(new Event('input', { bubbles: true })); };
+    let memoBusy = Promise.resolve();
+    const updateMemo = (name, block) => (memoBusy = memoBusy.then(async () => {
+      const S = getStore(); if (!S) return console.warn('[キャラシ] ココフォリアの状態が読めません');
+      const E = S.getState().entities; const uid = S.getState().app?.user?.uid;
+      // 書き換える駒：チャット欄で選んでいるキャラ（2026-11-19 作者「選んでるキャラクターメモが更新される感じで」）→ 無ければ発言者の名前 → キャラシの名前
+      const all = (E.roomCharacters?.ids || []).map((i) => E.roomCharacters.entities[i]).filter(Boolean);
+      const pick = (nm) => { const xs = all.filter((c) => c.name === nm); return xs.find((c) => c.owner === uid) || xs[0] || null; };
+      const sel = S.getState().app?.chat?.overrideCharacterId;
+      const typed = document.querySelector('input[name=name]')?.value || '';
+      const ch = (sel && E.roomCharacters.entities[sel]) || (typed && pick(typed)) || pick(name);
+      if (!ch) return console.warn('[キャラシ] 駒が見つかりません：' + name);
+      const komaN = walk(rootFiber(), (x) => x.memoizedProps && x.memoizedProps.characterId === ch._id && x.memoizedProps.roomId);
+      let open = null;
+      if (komaN) { const st = [komaN.child]; while (st.length && !open) { const n = st.pop(); if (!n) continue; const p = n.memoizedProps; if (p && typeof p.onDoubleClick === 'function' && /appStateMutate/.test(String(p.onDoubleClick))) open = p.onDoubleClick; if (n.child) st.push(n.child); if (n.sibling && n !== komaN.child) st.push(n.sibling); } }
+      if (!open) { const m = document.querySelector('#stt-sheet span'); if (m) { const o = m.textContent; m.textContent = '駒が盤面に無いのでメモを書き換えられません'; setTimeout(() => { m.textContent = o; }, 3000); } return; }
+      open({ stopPropagation() {} });
+      let ta = null; for (let i = 0; i < 20 && !ta; i++) { await wait(100); ta = document.querySelector('textarea[name=memo]'); }
+      if (!ta) return;
+      const cur = String(ta.value || '');
+      const RE = /【状態】[\s\S]*?【\/状態】\n?/;
+      setTa(ta, RE.test(cur) ? cur.replace(RE, block + '\n') : block + '\n' + cur);
+      await wait(120);
+      ta.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true }));
+      await wait(600);
+    }).catch((e) => console.warn('[キャラシ]', e)));
+    // 感情の相手の候補：いま盤面に出ている駒の名前（2026-11-19 作者「名前の候補はその部屋の駒名で、盤面に出てるキャラ」）
+    addEventListener('message', (e) => { if (e.origin !== ORIGIN || !e.data || e.data.type !== 'stt-names?') return; const S = getStore(); if (!S) return; const E = S.getState().entities; const names = [...new Set((E.roomCharacters?.ids || []).map((i) => E.roomCharacters.entities[i]).filter((c) => c && c.active && c.name).map((c) => c.name))]; e.source && e.source.postMessage({ type: 'stt-names', names }, ORIGIN); });
+    addEventListener('message', (e) => { if (e.origin !== ORIGIN || !e.data || e.data.type !== 'stt-memo') return; updateMemo(String(e.data.name || ''), String(e.data.block || '').slice(0, 1500)); });
   }
   // 駒のステータスが変わったら（チャットに「[ 連 ] 体術 : 1 → 0」と出る）、窓のキャラシにも伝える。
   // パレット・駒の編集・ほかの人の操作など、窓の外で変わっても窓の生命力・スペシャル・ファンブルが食い違わないようにする。
