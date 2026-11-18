@@ -497,8 +497,10 @@
       let ta = null; for (let i = 0; i < 20 && !ta; i++) { await wait(100); ta = document.querySelector('textarea[name=memo]'); }
       if (!ta) return;
       const cur = String(ta.value || '');
-      const RE = /【状態】[\s\S]*?【\/状態】\n?/;
-      setTa(ta, RE.test(cur) ? cur.replace(RE, block + '\n') : block + '\n' + cur);
+      // 2026-11-19 作者「文字量が増えまくるので短縮」→ 1行の【状態】…（古い【状態】…【/状態】の塊も置き換える）。何も無ければ行ごと消す
+      const RE = /【状態】[\s\S]*?【\/状態】\n?|【状態】[^\n]*\n?/;
+      const line = block ? block + '\n' : '';
+      setTa(ta, RE.test(cur) ? cur.replace(RE, line) : line + cur);
       await wait(120);
       ta.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true }));
       await wait(600);
